@@ -36,7 +36,7 @@ jobs:
           mkdir -p curl-build
           cd curl-build
 
-          # Disable SSL/TLS - build without HTTPS support
+          # Disable SSL/TLS and all optional features to simplify cross-compilation
           cmake .. \
             -G Ninja \
             -DCMAKE_SYSTEM_NAME=Linux \
@@ -44,15 +44,23 @@ jobs:
             -DCMAKE_C_FLAGS="-fPIC -march=armv7-a -mfpu=neon-vfpv4" \
             -DBUILD_SHARED_LIBS=ON \
             -DCMAKE_USE_OPENSSL=OFF \
+            -DCURL_USE_OPENSSL=OFF \
             -DENABLE_SSL=OFF \
+            -DCURL_ENABLE_SSL=OFF \
+            -DCURL_USE_LIBPSL=OFF \
             -DENABLE_THREADED_RESOLVER=ON \
             -DENABLE_IPV6=ON \
-            -DENABLE_LIBPSL=OFF \
             -DENABLE_BROTLI=OFF \
+            -DCURL_ENABLE_BROTLI=OFF \
             -DENABLE_ZSTD=OFF \
+            -DCURL_ZSTD=OFF \
             -DENABLE_NGHTTP2=OFF \
+            -DCURL_ENABLE_NGHTTP2=OFF \
             -DENABLE_LIBIDN2=OFF \
+            -DCURL_USE_LIBIDN2=OFF \
             -DENABLE_LIBSSH2=OFF \
+            -DCURL_USE_LIBSSH2=OFF \
+            -DENABLE_LDAP=OFF \
             -DBUILD_TESTING=OFF \
             -DBUILD_CURL_EXE=OFF \
             ../curl-src
