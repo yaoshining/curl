@@ -14,40 +14,25 @@ jobs:
           repository: yaoshining/curl
           path: curl-src
 
-      - name: Install dependencies
+      - name: Install ARM cross-compiler
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             build-essential \
             cmake \
             ninja-build \
-            wget \
-            unzip \
+            gcc-arm-linux-gnueabihf \
+            libc6-dev-armhf-cross \
+            pkg-config \
             curl
-
-      - name: Download OpenHarmony SDK
-        run: |
-          mkdir -p sdk-extract
-          cd sdk-extract
-          # Download OpenHarmony SDK
-          wget -q https://repo.harmonyos.com/ohos-release/20241112/global_publish/ohos-sdk-windows_linux-public.tar.gz -O oh-sdk.tar.gz
-          tar -xzf oh-sdk.tar.gz
-          ls -la
 
       - name: Configure and Build
         run: |
-          export OHOS_NDK=$(pwd)/sdk-extract/openharmony
-          export PATH=$OHOS_NDK/native/llvm/bin:$PATH
-          export SYSROOT=$OHOS_NDK/native/sysroot
+          export CC=arm-linux-gnueabihf-gcc
+          export SYSROOT=/usr/arm-linux-gnueabihf
 
-          echo "NDK path: $OHOS_NDK"
-          echo "LLVM bin: $(ls $OHOS_NDK/native/llvm/bin/ | head -5)"
-
-          # Check clang version
-          armv7-unknown-linux-ohos-clang --version || echo "armv7 toolchain not found"
-
-          # Check sysroot
-          ls $SYSROOT/usr/lib/ 2>/dev/null | head -5 || echo "sysroot lib not found"
+          echo "Using cross compiler: $CC"
+          $CC --version
 
           mkdir -p curl-build
           cd curl-build
@@ -55,8 +40,8 @@ jobs:
           cmake .. \
             -G Ninja \
             -DCMAKE_SYSTEM_NAME=Linux \
-            -DCMAKE_C_COMPILER=armv7-unknown-linux-ohos-clang \
-            -DCMAKE_C_FLAGS="--sysroot=$SYSROOT -fPIC -target armv7-unknown-linux-ohos -march=armv7-a" \
+            -DCMAKE_C_COMPILER=$CC \
+            -DCMAKE_C_FLAGS="--sysroot=$SYSROOT -fPIC -march=armv7-a -mfpu=neon-vfpv4" \
             -DCMAKE_SHARED_LINKER_FLAGS="--sysroot=$SYSROOT" \
             -DBUILD_SHARED_LIBS=ON \
             -DCMAKE_USE_OPENSSL=OFF \
@@ -71,7 +56,6 @@ jobs:
             -DENABLE_LIBSSH2=OFF \
             -DBUILD_TESTING=OFF \
             -DBUILD_CURL_EXE=OFF \
-            -DCURL_LDFLAGS="-L$SYSROOT/usr/lib -lhilog_ndk.z" \
             ../curl-src
 
       - name: Build
@@ -82,6 +66,7 @@ jobs:
       - name: List output files
         run: |
           ls -la curl-build/lib/
+          file curl-build/lib/*
 
       - name: Create symlinks
         run: |
