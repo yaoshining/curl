@@ -68,7 +68,7 @@ jobs:
       - name: Build
         run: |
           cd curl-build
-          ninja libcurl
+          ninja
 
       - name: List output files
         run: |
