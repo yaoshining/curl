@@ -14,7 +14,7 @@ jobs:
           repository: yaoshining/curl
           path: curl-src
 
-      - name: Install ARM cross-compiler
+      - name: Install ARM cross-compiler and MbedTLS
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -24,11 +24,15 @@ jobs:
             gcc-arm-linux-gnueabihf \
             libc6-dev-armhf-cross \
             pkg-config \
-            curl
+            curl \
+            libmbedtls-dev \
+            libmbedx509-dev \
+            libmbedcrypto-dev
 
       - name: Configure and Build
         run: |
           export CC=arm-linux-gnueabihf-gcc
+          export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:$PKG_CONFIG_PATH
 
           echo "Using cross compiler: $CC"
           $CC --version
@@ -41,6 +45,7 @@ jobs:
             -DCMAKE_SYSTEM_NAME=Linux \
             -DCMAKE_C_COMPILER=$CC \
             -DCMAKE_C_FLAGS="-fPIC -march=armv7-a -mfpu=neon-vfpv4" \
+            -DCMAKE_LIBRARY_PATH=/usr/lib/arm-linux-gnueabihf \
             -DBUILD_SHARED_LIBS=ON \
             -DCMAKE_USE_OPENSSL=OFF \
             -DCURL_USE_MBEDTLS=ON \
