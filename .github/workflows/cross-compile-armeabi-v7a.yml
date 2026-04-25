@@ -1,0 +1,104 @@
+name: Cross-compile libcurl for HarmonyOS armeabi-v7a
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout curl source
+        uses: actions/checkout@v4
+        with:
+          repository: yaoshining/curl
+          path: curl-src
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            wget \
+            unzip \
+            curl
+
+      - name: Download OpenHarmony SDK
+        run: |
+          mkdir -p sdk-extract
+          cd sdk-extract
+          # Download OpenHarmony SDK
+          wget -q https://repo.harmonyos.com/ohos-release/20241112/global_publish/ohos-sdk-windows_linux-public.tar.gz -O oh-sdk.tar.gz
+          tar -xzf oh-sdk.tar.gz
+          ls -la
+
+      - name: Configure and Build
+        run: |
+          export OHOS_NDK=$(pwd)/sdk-extract/openharmony
+          export PATH=$OHOS_NDK/native/llvm/bin:$PATH
+          export SYSROOT=$OHOS_NDK/native/sysroot
+
+          echo "NDK path: $OHOS_NDK"
+          echo "LLVM bin: $(ls $OHOS_NDK/native/llvm/bin/ | head -5)"
+
+          # Check clang version
+          armv7-unknown-linux-ohos-clang --version || echo "armv7 toolchain not found"
+
+          # Check sysroot
+          ls $SYSROOT/usr/lib/ 2>/dev/null | head -5 || echo "sysroot lib not found"
+
+          mkdir -p curl-build
+          cd curl-build
+
+          cmake .. \
+            -G Ninja \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_C_COMPILER=armv7-unknown-linux-ohos-clang \
+            -DCMAKE_C_FLAGS="--sysroot=$SYSROOT -fPIC -target armv7-unknown-linux-ohos -march=armv7-a" \
+            -DCMAKE_SHARED_LINKER_FLAGS="--sysroot=$SYSROOT" \
+            -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_USE_OPENSSL=OFF \
+            -DCURL_USE_MBEDTLS=ON \
+            -DENABLE_THREADED_RESOLVER=ON \
+            -DENABLE_IPV6=ON \
+            -DENABLE_LIBPSL=OFF \
+            -DENABLE_BROTLI=OFF \
+            -DENABLE_ZSTD=OFF \
+            -DENABLE_NGHTTP2=OFF \
+            -DENABLE_LIBIDN2=OFF \
+            -DENABLE_LIBSSH2=OFF \
+            -DBUILD_TESTING=OFF \
+            -DBUILD_CURL_EXE=OFF \
+            -DCURL_LDFLAGS="-L$SYSROOT/usr/lib -lhilog_ndk.z" \
+            ../curl-src
+
+      - name: Build
+        run: |
+          cd curl-build
+          ninja libcurl
+
+      - name: List output files
+        run: |
+          ls -la curl-build/lib/
+
+      - name: Create symlinks
+        run: |
+          cd curl-build/lib
+          # Create soname symlinks
+          for f in libcurl.so.*; do
+            if [ -f "$f" ] && [ ! -L "$f" ]; then
+              base="${f%.so.*}"
+              ln -sf "$f" "${base}.so"
+            fi
+          done
+          ls -la
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libcurl-armeabi-v7a
+          path: |
+            curl-build/lib/libcurl.so*
+          if-no-files-found: error
