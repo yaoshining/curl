@@ -29,7 +29,6 @@ jobs:
       - name: Configure and Build
         run: |
           export CC=arm-linux-gnueabihf-gcc
-          export SYSROOT=/usr/arm-linux-gnueabihf
 
           echo "Using cross compiler: $CC"
           $CC --version
@@ -41,8 +40,7 @@ jobs:
             -G Ninja \
             -DCMAKE_SYSTEM_NAME=Linux \
             -DCMAKE_C_COMPILER=$CC \
-            -DCMAKE_C_FLAGS="--sysroot=$SYSROOT -fPIC -march=armv7-a -mfpu=neon-vfpv4" \
-            -DCMAKE_SHARED_LINKER_FLAGS="--sysroot=$SYSROOT" \
+            -DCMAKE_C_FLAGS="-fPIC -march=armv7-a -mfpu=neon-vfpv4" \
             -DBUILD_SHARED_LIBS=ON \
             -DCMAKE_USE_OPENSSL=OFF \
             -DCURL_USE_MBEDTLS=ON \
